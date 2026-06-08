@@ -1,0 +1,89 @@
+/// While the problem description indicates a return status of 1 should be returned on errors,
+/// it is much more common to return a `Result`, so we provide an error type for the result here.
+#[derive(Debug, Eq, PartialEq)]
+pub enum AffineCipherError {
+    NotCoprime(i32),
+}
+
+/// Encodes the plaintext using the affine cipher with key (`a`, `b`). Note that, rather than
+/// returning a return code, the more common convention in Rust is to return a `Result`.
+pub fn encode(plaintext: &str, a: i32, b: i32) -> Result<String, AffineCipherError> {
+    println!("Encode {plaintext} with the key ({a}, {b})");
+
+    if !is_coprime(a, 26) {
+        return Err(AffineCipherError::NotCoprime(a));
+    }
+
+    let encoded_text = plaintext
+        .to_ascii_lowercase()
+        .chars()
+        .filter(|c| c.is_alphanumeric())
+        .map(|c| encode_char(c, a, b))
+        .collect::<Vec<char>>()
+        .chunks(5)
+        .map(|chunk| chunk.iter().collect::<String>())
+        .collect::<Vec<String>>()
+        .join(" ");
+
+    Ok(encoded_text)
+}
+
+/// Decodes the ciphertext using the affine cipher with key (`a`, `b`). Note that, rather than
+/// returning a return code, the more common convention in Rust is to return a `Result`.
+pub fn decode(ciphertext: &str, a: i32, b: i32) -> Result<String, AffineCipherError> {
+    let a_inverse = mod_inverse(a, 26);
+    if a_inverse == -1 {
+        return Err(AffineCipherError::NotCoprime(a));
+    }
+
+    let mut decoded_text = String::new();
+    for c in ciphertext.chars() {
+        if c.is_ascii_alphabetic() {
+            let decoded_char = decode_char(c, a_inverse, b);
+            decoded_text.push(decoded_char);
+        } else if c.is_ascii_digit() {
+            decoded_text.push(c);
+        }
+    }
+
+    Ok(decoded_text)
+}
+
+fn encode_char(c: char, a: i32, b: i32) -> char {
+    match c {
+        '0'..='9' => c,
+        _ => {
+            let encoded_char = (a * (c as i32 - 'a' as i32) + b).rem_euclid(26);
+            char::from((encoded_char + 'a' as i32) as u8)
+        }
+    }
+}
+
+fn is_coprime(a: i32, b: i32) -> bool {
+    gcd(a, b) == 1
+}
+
+fn gcd(a: i32, b: i32) -> i32 {
+    if b == 0 {
+        a
+    } else {
+        gcd(b, a % b)
+    }
+}
+
+fn mod_inverse(a: i32, m: i32) -> i32 {
+    for i in 1..m {
+        if (a * i) % m == 1 {
+            return i;
+        }
+    }
+    -1
+}
+
+fn decode_char(c: char, a_inverse: i32, b: i32) -> char {
+    // println!("Decode {c} with the key ({a_inverse}, {b})");
+    let decoded_char = (a_inverse * (c as i32 - 'a' as i32 - b)) % 26;
+    // println!("decoded_char: {decoded_char}");
+    let delta = if decoded_char < 0 { 26 } else { 0 };
+    ((decoded_char + delta + 'a' as i32) as u8 as char).to_ascii_lowercase()
+}
