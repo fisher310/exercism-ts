@@ -1,0 +1,13 @@
+use std::collections::BTreeMap;
+
+pub fn transform(h: &BTreeMap<i32, Vec<char>>) -> BTreeMap<char, i32> {
+    let mut res = BTreeMap::new();
+
+    for (key, chars) in h.iter() {
+        for ch in chars {
+            res.insert(ch.to_ascii_lowercase(), *key);
+        }
+    }
+
+    res
+}
